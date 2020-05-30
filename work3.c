@@ -79,7 +79,7 @@ void remove_ipc(void){
 	int sem_id,shm_id;
 	sem_id=semget(SEM_KEY,0,0);
 	if(sem_id==-1){
-		perror("Get Semaphres");
+		perror("Get Semaphores");
 	}else{
 		if(semctl(sem_id,0,IPC_RMID,0)==-1){
 			perror("Remove Semaphores");
