@@ -52,8 +52,8 @@ void create_ipc(void){
 	}else{
 		printf("Create Semaphores:OK\n");
 		init_sem(MUTEX,1);
-		init_sem(EMPTYA,6);
-		init_sem(EMPTYB,6);
+		init_sem(EMPTYA,8);
+		init_sem(EMPTYB,4);
 		init_sem(FULLA,0);
 		init_sem(FULLB,0);
 		printf("Initialize Semaphores:OK\n");
