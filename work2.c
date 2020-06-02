@@ -7,19 +7,19 @@
 #define DELAY_TIME_MAX 10	//最大执行时间
 
 void *thread_func(void){
-	int thread_id=pthread_self();
+	pthread_t thread_id=pthread_self();
 	int delay_time=0;
 	int count=0;
 	int sum=0;
-	printf("Thread %d is starting\n",thread_id);
+	printf("Thread %lu is starting\n",thread_id);
 	//每个线程执行REPEAT_NUMBER个任务，每个任务即睡眠一段时间，且时间不超过DELAY_TIME_MAX秒
 	for(count=0;count<REPEAT_NUMBER;count++){
 		delay_time=(int)(rand()%DELAY_TIME_MAX)+1;
 		sleep(delay_time);
-		printf("\tThread %d:job %d delay=%d\n",thread_id,count,delay_time);
+		printf("\tThread %lu:job %d delay=%d\n",thread_id,count,delay_time);
 		sum+=delay_time;
 	}
-	printf("Thread %d finish,exit %d\n",thread_id,delay_time);
+	printf("Thread %lu finish,exit %d\n",thread_id,sum);
 	//线程退出时返回所有任务的总执行时间
 	pthread_exit((void*)sum);
 }
