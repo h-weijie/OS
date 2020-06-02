@@ -8,18 +8,21 @@ typedef struct{
 
 static int a=5;
 
+//向线程传递字符串
 void thread0(char *arg){
 	char *str;
 	str=arg;
 	printf("Thread0 received parameter passed from main is %s\n",str);
 }
 
+//向线程传递结构体
 void thread1(void *arg){
 	menber* temp=(menber*)arg;
 	printf("Thread1 menber->num=%d\n",temp->num);
 	printf("Thread1 menber->name=%s\n",temp->name);
 }
 
+//通过全局变量向线程传参
 void thread2(void* arg){
 	printf("Thread2 a=%d\n",a);
 }

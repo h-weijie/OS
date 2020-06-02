@@ -8,7 +8,7 @@
 #include<sys/shm.h>
 
 #define WHITE	"\033[0;37m"
-#define RED	"\033[0;31m"
+#define RED		"\033[0;31m"
 #define YELLOW	"\033[0;33m"
 #define GREEN	"\033[0;32m"
 #define PINK	"\033[0;35m"
@@ -16,7 +16,7 @@
 #define SEM_KEY 0x2233
 #define SHM_KEY 0x6666
 
-#define NUM_SEMAPHORE	5
+#define NUM_SEMAPHORE	5//信号量个数
 #define MUTEX	0
 #define EMPTYA	1
 #define EMPTYB	2
@@ -24,7 +24,7 @@
 #define FULLB	4
 
 #define N 12
-
+//工作台，只记录A与B的个数
 typedef struct{
 	int numA,numB;
 }Station;
@@ -32,6 +32,7 @@ typedef struct{
 static int sem_id;
 static Station *s;
 
+//信号量初始化，将sem_num初始为value
 void init_sem(int sem_num,int value){
 	struct sembuf op;
 	op.sem_num=sem_num;
@@ -43,6 +44,7 @@ void init_sem(int sem_num,int value){
 	}
 }
 
+//在Linux内核中创建信号量与共享内存
 void create_ipc(void){
 	int shm_id;
 	sem_id=semget(SEM_KEY,NUM_SEMAPHORE,IPC_CREAT|IPC_EXCL|0666);
@@ -51,6 +53,7 @@ void create_ipc(void){
 		exit(1);
 	}else{
 		printf("Create Semaphores:OK\n");
+		//初始化信号量
 		init_sem(MUTEX,1);
 		init_sem(EMPTYA,8);
 		init_sem(EMPTYB,4);
@@ -70,12 +73,13 @@ void create_ipc(void){
 			perror("Attach Share Memory");
 			exit(1);
 		}else{
-			s->numA=s->numB=0;
+			s->numA=s->numB=0;//初始化工作站，A与B的个数初始为零
 			printf("Initialize STATION:OK\n");
 		}
 	}
 }
 
+//删除内核中的信号量与共享内存
 void remove_ipc(void){
 	int shm_id;
 	sem_id=semget(SEM_KEY,0,0);
@@ -101,6 +105,7 @@ void remove_ipc(void){
 	}
 }
 
+//获取内核中的信号量与共享内存，并设置到全局变量中
 void get_ipc(void){
 	int shm_id;
 	sem_id=semget(SEM_KEY,0,0);
@@ -120,6 +125,7 @@ void get_ipc(void){
 	}
 }
 
+//信号量wait操作
 void Wait(int sem_num){
 	struct sembuf op;
 	op.sem_num=sem_num;
@@ -131,6 +137,7 @@ void Wait(int sem_num){
 	}
 }
 
+//信号量signal操作
 void Signal(int sem_num){
 	struct sembuf op;
 	op.sem_num=sem_num;
@@ -142,21 +149,28 @@ void Signal(int sem_num){
 	}
 }
 
+//生产部件，类型为tyoe，个数为num
 void produce(char type,int num){
 	sleep(1+random()%5);
-	//for(int i=0;i<num;i++){ sleep(1+random()%5); }
 }
 
+//检查工作站状态并打印
 void pstation(){
-	printf("[");
-	int i;
-	for(i=0;i<s->numA;i++){ printf("A"); }
-	for(i=0;i<s->numB;i++){ printf("B"); }
-	int blank=N-s->numA-s->numB;
-	for(i=0;i<blank;i++){ printf("-"); }
-	printf("]\n");
+	if(s->numA>=0&&s->numB>=0&&s->numA+s->numB<N){	//检查工作站状态是否正确
+		printf("[");
+		int i;
+		for(i=0;i<s->numA;i++){ printf("A"); }
+		for(i=0;i<s->numB;i++){ printf("B"); }
+		int blank=N-s->numA-s->numB;
+		for(i=0;i<blank;i++){ printf("-"); }
+		printf("]\n");
+	}else{
+		printf("Station error\n");
+		exit(1);
+	}
 }
 
+//将个数为num，类型tyoe的部件放入工作站
 void put(char type,int num){
 	if(type=='A'){
 		s->numA+=num;
@@ -166,6 +180,7 @@ void put(char type,int num){
 	}
 }
 
+//将个数为num，类型tyoe的部件从工作站取出
 void take(char type,int num){
 	if(type=='A'){
 		s->numA-=num;
@@ -175,6 +190,7 @@ void take(char type,int num){
 	}	
 }
 
+//工人A的进程
 void workA(void){
 	int i;
 	get_ipc();
@@ -190,6 +206,7 @@ void workA(void){
 	}
 }
 
+//工人B的进程
 void workB(void){
 	int i;
 	get_ipc();
@@ -205,6 +222,7 @@ void workB(void){
 	}
 }
 
+//工人C的进程
 void workC(void){
 	int i;
 	get_ipc();
@@ -224,6 +242,7 @@ void workC(void){
 }
 
 int main(int argc,char **argv){
+	//根据程序名运行相应操作
 	if(strstr(argv[0],"create")){
 		create_ipc();
 	}
