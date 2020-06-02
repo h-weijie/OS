@@ -171,7 +171,7 @@ void producer(void){
 		Wait(EMPTY);
 		Wait(MUTEX);
 		strcpy(q->buf[q->tail],data);
-		printf(PINK"Producer %d Write Buffer #%d,Data:%s"WHITE"\n",getpid(),q->tail,q->buf[q->tail]);
+		printf(RED"Producer %d Write Buffer #%d,Data:%s"WHITE"\n",getpid(),q->tail,q->buf[q->tail]);
 		q->tail=(q->tail+1)%N;
 		Signal(MUTEX);
 		Signal(FULL);
@@ -201,14 +201,14 @@ void consumer(void){
 
 int main(int argc,char **argv){
 	//根据不同的程序名执行不同的操作
-	if(strstr(argv[0],"create")==0){
+	if(strstr(argv[0],"create")){
 		create_ipc();
-	}else if(strstr(argv[0],"remove")==0){
+	}else if(strstr(argv[0],"remove")){
 		remove_ipc();
-	}else if(strstr(argv[0],"producer")==0){
+	}else if(strstr(argv[0],"producer")){
 		get_ipc();
 		producer();
-	}else if(strstr(argv[0],"consumer")==0){
+	}else if(strstr(argv[0],"consumer")){
 		get_ipc();
 		consumer();
 	}else{
