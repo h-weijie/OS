@@ -8,25 +8,22 @@
 #include<sys/shm.h>
 
 #define WHITE	"\033[0;37m"
-#define RED		"\033[0;31m"
+#define RED	"\033[0;31m"
 #define YELLOW	"\033[0;33m"
 #define GREEN	"\033[0;32m"
-#define PINK	"\033[0;35m"
 
 #define SEM_KEY 0x2233
 #define SHM_KEY 0x6666
 
-#define NUM_SEMAPHORE	5//信号量个数
-#define MUTEX	0
-#define EMPTYA	1
-#define EMPTYB	2
-#define FULLA	3
-#define FULLB	4
+#define NUM_SEMAPHORE	4//信号量个数
+#define mutexStation	0
+#define suspend_A	1
+#define suspend_B	2
+#define suspend_C	3
 
-#define N 12
-//工作台，只记录A与B的个数
+//工作台，记录A与B的个数
 typedef struct{
-	int numA,numB;
+	int count_A,count_B,empty;
 }Station;
 
 static int sem_id;
@@ -54,11 +51,10 @@ void create_ipc(void){
 	}else{
 		printf("Create Semaphores:OK\n");
 		//初始化信号量
-		init_sem(MUTEX,1);
-		init_sem(EMPTYA,8);
-		init_sem(EMPTYB,4);
-		init_sem(FULLA,0);
-		init_sem(FULLB,0);
+		init_sem(mutexStation,1);
+		init_sem(suspend_A,0);
+		init_sem(suspend_B,0);
+		init_sem(suspend_C,0);
 		printf("Initialize Semaphores:OK\n");
 	}
 
@@ -73,7 +69,8 @@ void create_ipc(void){
 			perror("Attach Share Memory");
 			exit(1);
 		}else{
-			s->numA=s->numB=0;//初始化工作站，A与B的个数初始为零
+			s->count_A=s->count_B=0;//初始化工作站，A与B的个数初始为零
+			s->empty=12;
 			printf("Initialize STATION:OK\n");
 		}
 	}
@@ -151,18 +148,17 @@ void Signal(int sem_num){
 
 //生产部件，类型为tyoe，个数为num
 void produce(char type,int num){
-	sleep(1+random()%5);
+	sleep(1+random()%num);
 }
 
 //检查工作站状态并打印
 void pstation(){
-	if(s->numA>=0&&s->numB>=0&&s->numA+s->numB<N){	//检查工作站状态是否正确
+	if(s->count_A>=0&&s->count_B>=0&&s->count_A+s->count_B<=12){	//检查工作站状态是否正确
 		printf("[");
 		int i;
-		for(i=0;i<s->numA;i++){ printf("A"); }
-		for(i=0;i<s->numB;i++){ printf("B"); }
-		int blank=N-s->numA-s->numB;
-		for(i=0;i<blank;i++){ printf("-"); }
+		for(i=0;i<s->count_A;i++){ printf("A"); }
+		for(i=0;i<s->count_B;i++){ printf("B"); }
+		for(i=0;i<s->empty;i++){ printf("-"); }
 		printf("]\n");
 	}else{
 		printf("Station error\n");
@@ -172,22 +168,13 @@ void pstation(){
 
 //将个数为num，类型tyoe的部件放入工作站
 void put(char type,int num){
-	if(type=='A'){
-		s->numA+=num;
-	}
-	if(type=='B'){
-		s->numB+=num;
-	}
+	sleep(1+random()%num);
 }
 
 //将个数为num，类型tyoe的部件从工作站取出
-void take(char type,int num){
-	if(type=='A'){
-		s->numA-=num;
-	}
-	if(type=='B'){
-		s->numB-=num;
-	}	
+void takeAB(int numA,int numB){
+	int num=numA+numB;
+	sleep(1+random()%num);
 }
 
 //工人A的进程
@@ -195,14 +182,20 @@ void workA(void){
 	int i;
 	get_ipc();
 	for(;;){
-		produce('A',2);
-		for(i=0;i<2;i++){ Wait(EMPTYA); }
-		Wait(MUTEX);
-		put('A',2);
-		printf(RED"WorkA put two A to Station"WHITE);
-		pstation();
-		Signal(MUTEX);
-		for(i=0;i<2;i++){ Signal(FULLA); }
+		Wait(mutexStation);
+		if(s->count_A<=7&&s->empty>=2){
+			produce('A',2);
+			put('A',2);
+			s->count_A=s->count_A+2;
+			s->empty=s->empty-2;
+			printf(RED"WorkA put two A to Station"WHITE);
+			pstation();
+			Signal(mutexStation);
+			Signal(suspend_C);
+		}else{
+			Signal(mutexStation);
+			Wait(suspend_A);
+		}
 	}
 }
 
@@ -211,14 +204,20 @@ void workB(void){
 	int i;
 	get_ipc();
 	for(;;){
-		produce('B',1);
-		Wait(EMPTYB);
-		Wait(MUTEX);
-		put('B',1);
-		printf(YELLOW"WorkB put one B to Station"WHITE);
-		pstation();
-		Signal(MUTEX);
-		Signal(FULLB);
+		Wait(mutexStation);
+		if(s->count_B<=7&&s->empty>=1){
+			produce('B',1);
+			put('B',1);
+			s->count_B=s->count_B+1;
+			s->empty=s->empty-1;
+			printf(YELLOW"WorkB put one B to Station"WHITE);
+			pstation();
+			Signal(mutexStation);
+			Signal(suspend_C);
+		}else{
+			Signal(mutexStation);
+			Wait(suspend_B);
+		}
 	}
 }
 
@@ -227,17 +226,22 @@ void workC(void){
 	int i;
 	get_ipc();
 	for(;;){
-		for(i=0;i<4;i++){ Wait(FULLA); }
-		for(i=0;i<3;i++){ Wait(FULLB); }
-		Wait(MUTEX);
-		take('A',4);
-		take('B',3);
-		printf(GREEN"WorkC take 4A3B from Station"WHITE);
-		pstation();
-		Signal(MUTEX);
-		for(i=0;i<4;i++){ Signal(EMPTYA); }
-		for(i=0;i<3;i++){ Signal(EMPTYB); }
-		produce('C',1);
+		Wait(mutexStation);
+		if(s->count_A>=4&&s->count_B>=3){
+			takeAB(4,3);
+			s->count_A=s->count_A-4;
+			s->count_B=s->count_B-3;
+			s->empty=s->empty+7;
+			printf(GREEN"WorkC take 4A3B from Station"WHITE);
+			pstation();
+			produce('C',1);
+			Signal(mutexStation);
+			Signal(suspend_A);
+			Signal(suspend_B);
+		}else{
+			Signal(mutexStation);
+			Wait(suspend_C);
+		}
 	}
 }
 
