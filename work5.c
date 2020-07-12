@@ -21,13 +21,13 @@
 #define suspend_B	2
 #define suspend_C	3
 
-//工作台，记录A与B的个数
+//工作台，记录A、B与空位的个数
 typedef struct{
 	int count_A,count_B,empty;
 }Station;
 
 static int sem_id;
-static Station *s;
+static Station *s;//共享内存
 
 //信号量初始化，将sem_num初始为value
 void init_sem(int sem_num,int value){
@@ -69,7 +69,7 @@ void create_ipc(void){
 			perror("Attach Share Memory");
 			exit(1);
 		}else{
-			s->count_A=s->count_B=0;//初始化工作站，A与B的个数初始为零
+			s->count_A=s->count_B=0;//初始化工作站，A与B的个数初始为零，空位为12
 			s->empty=12;
 			printf("Initialize STATION:OK\n");
 		}
@@ -171,7 +171,7 @@ void put(char type,int num){
 	sleep(1+random()%num);
 }
 
-//将个数为num，类型tyoe的部件从工作站取出
+//同时取出numA个partA与numB个partB
 void takeAB(int numA,int numB){
 	int num=numA+numB;
 	sleep(1+random()%num);
