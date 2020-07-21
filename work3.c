@@ -201,9 +201,9 @@ void consumer(void){
 
 int main(int argc,char **argv){
 	//根据不同的程序名执行不同的操作
-	if(strstr(argv[0],"create")){
+	if(strstr(argv[0],"create0")){
 		create_ipc();
-	}else if(strstr(argv[0],"remove")){
+	}else if(strstr(argv[0],"remove0")){
 		remove_ipc();
 	}else if(strstr(argv[0],"producer")){
 		get_ipc();
@@ -212,7 +212,7 @@ int main(int argc,char **argv){
 		get_ipc();
 		consumer();
 	}else{
-		printf("Use name: {create | remove | producer | consumer }\n");
+		printf("Use name: {create0 | remove0 | producer | consumer }\n");
 	}
 	return 0;
 }

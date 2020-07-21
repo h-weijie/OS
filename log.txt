@@ -1,6 +1,0 @@
-Remove Semaphores:OK
-Remove Share Memory:OK
-Create Semaphores:OK
-Initialize Semaphores:OK
-Create Share Memory:OK
-Initialize STATION:OK
